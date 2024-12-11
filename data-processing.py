@@ -1,6 +1,6 @@
 import pandas as pd
 
-df = pd.read_csv("./SMT_2024/SMT_Algebra_2024_Small.csv").rename(columns={"#": "id"})
+df = pd.read_csv("SMT_2024/SMT_Algebra_2024_Small.csv").rename(columns={"#": "id"})
 
 # sort by id
 df.sort_values(by=['id'], inplace=True)
