@@ -93,5 +93,5 @@ if __name__ == '__main__':
     df = pd.read_csv('SMT_2024/SMT_Algebra_2024_Small_processed.csv')
     #debug_cheating_probability(df, '069D', '069F')
     cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
-    #print("Cheating Probability Matrix:")
+    #print("Cheating Probability Matrix:") 
     #print(cheating_matrix)
