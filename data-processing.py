@@ -54,23 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--torchgeo', action='store_true', help='Process a smaller subset of the data')
     args = parser.parse_args()
     
-<<<<<<< HEAD
     df = generate()
-=======
-    counts = df[df[correct_col] == 0][col].value_counts()
-    df.loc[df[correct_col] == 0, freq_col] = df.loc[df[correct_col] == 0, col].map(counts/counts.sum())
-    df.loc[df[correct_col] == 1, freq_col] = df[f"C{i}"].mean()
-
-for i in range(1, 11):
-    correct_perc = f"C{i}_perc"
-    df[correct_perc] = df[f"C{i}"].mean()
-
-
-# Add the Start Time to the times in 'T1' to 'T10'
-for col in [f"T{i}" for i in range(1, 11)]:
-    # Convert 'Start Time' to datetime
-    start_time = pd.to_datetime(df['Start Time'])
->>>>>>> e4b5b67e385e9375b330e54061db43846481dbc8
     
     if args.small:
         # small_df = pd.read_csv("SMT_2024/SMT_Algebra_2024_Small.csv").rename(columns={"#": "id"})

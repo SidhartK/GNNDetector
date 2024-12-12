@@ -20,6 +20,10 @@ def create_fake_dataset():
 
 def create_dataset():
     df = pd.read_csv("SMT_2024/SMT_Algebra_2024_Small_processed.csv").rename(columns={"#": "id"})
+    import pdb; pdb.set_trace()
+    df[[f"T{k}" for k in range(1, 11)]] = df[[f"T{k}" for k in range(1, 11)]].apply(pd.to_datetime).apply(lambda x: (x - x[0]).total_seconds())
+    time_range = (df[[f"T{k}" for k in range(1, 11)]] - df[[f"T{k}" for k in range(1, 11)]].min()).max()
+    import pdb; pdb.set_trace()
     edge_index = []
     edge_attr = []
     num_students = df.shape[0]
@@ -31,11 +35,15 @@ def create_dataset():
             import pdb; pdb.set_trace()
             answer_match = (row_i[[f"A{k}" for k in range(1, 11)]] == row_j[[f"A{k}" for k in range(1, 11)]]).to_numpy()
             both_incorrect = (row_i[[f"C{k}" for k in range(1, 11)]] == 0) & (row_j[[f"C{k}" for k in range(1, 11)]] == 0).to_numpy()
-            answer_likelihood = row_i[[f"A{k}_freq" for k in range(1, 11)]].to_numpy()
-            edge_x = answer_match * both_incorrect * answer_likelihood
+            answer_likelihood = 1 - row_i[[f"A{k}_freq" for k in range(1, 11)]].to_numpy()
+            time_difference = np.abs(row_i[[f"T{k}" for k in range(1, 11)]].to_numpy() - row_j[[f"T{k}" for k in range(1, 11)]].to_numpy())
+            answer_suss = answer_match * both_incorrect * answer_likelihood
+            edge_attr.append(np.concatenate([np.array([cp]), answer_suss, time_difference]))
 
-            
-            edge_attr.append(np.concatenate([np.array([cp]), edge_x]))
+    edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
+    edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+
+    x = torch.tensor(df[[f"C{k}" for k in range(1, 11)] + [f"A{k}_freq" for k in range(1, 11)]].to_numpy(), dtype=torch.float)
     
 
 
