@@ -4,6 +4,10 @@ import math
 from datetime import datetime, timedelta
 from tqdm import tqdm  # Import tqdm for progress bar
 
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+
 def cheating_probability(row1, row2, k1=0.5, k2=0.7, k3=0.6, t_thresh=10, verbose = False):
     w1, w2, w3 = 0.2, 0.5, 0.3
     # Correct/Incorrect Answer Matching (CIM)
@@ -91,7 +95,21 @@ def cheating_probability_matrix(df):
 if __name__ == '__main__':
     # Main execution
     df = pd.read_csv('SMT_2024/SMT_Algebra_2024_Small_processed.csv')
-    debug_cheating_probability(df, '069D', '069D')
+    # debug_cheating_probability(df, '069D', '069D')
     cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
+    # import pdb; pdb.set_trace()
+    # Generate some data
+    data = cheating_matrix.flatten()
+
+    # Create a CDF using norm.cdf()
+    x = np.sort(data)
+    y = norm.cdf(x, np.mean(data), np.std(data))
+
+    # Plot the CDF
+    plt.plot(x, y)
+    plt.xlabel('Value')
+    plt.ylabel('CDF')
+    plt.title('CDF of a Heuristic Distribution')
+    plt.show()
     #print("Cheating Probability Matrix:") 
     #print(cheating_matrix)

@@ -54,13 +54,12 @@ def make_torch_geometric(df):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--small', action='store_true', help='Process a smaller subset of the data')
-    parser.add_argument('--torchgeo', action='store_true', help='Process a smaller subset of the data')
+    parser.add_argument('--big', action='store_true', help='Process the entire subset of the data')
     args = parser.parse_args()
     
     df = generate()
     
-    if args.small:
+    if not args.big:
         # small_df = pd.read_csv("SMT_2024/SMT_Algebra_2024_Small.csv").rename(columns={"#": "id"})
         small_df = pd.read_csv("SMT_2024/SMT_Algebra_2024_processed_small.csv").rename(columns={"#": "id"})
 
