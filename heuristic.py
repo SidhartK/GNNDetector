@@ -17,7 +17,7 @@ def cheating_probability(row1, row2, k1=0.5, k2=0.7, k3=0.6, t_thresh=10, verbos
         if row1[f'C{i}'] == 0 and row2[f'C{i}'] == 0 and row1[f'A{i}'] == row2[f'A{i}']:
             rarity_weight = 1 - row1[f'A{i}_freq']  # Higher weight for rarer answers
             mia_matches += rarity_weight
-    p_mia = min(1, mia_matches**2/4**2)
+    p_mia = 1 - np.exp(-0.8 * (mia_matches ** 2))
     #print("p_mia:", p_mia)
     
     # Timing Similarity (TS)
@@ -74,9 +74,9 @@ def cheating_probability_matrix(df):
         if cheating_pairs[i][0] < cheating_pairs[i][1]:  # Ensure the first index is less than the second
             print(f"User {df.iloc[cheating_pairs[i][0]]['id']} and User {df.iloc[cheating_pairs[i][1]]['id']} : {cheating_pairs[i][2]}")
             count += 1
-        if count == 20:  # Stop after printing 5 valid pairs
+        if count == 50:  # Stop after printing 5 valid pairs
             break
-    
+    '''
     print("\nBottom 5 pairs with lowest cheating probability:")
     count = 0
     for i in range(1, len(cheating_pairs) + 1):
@@ -85,12 +85,12 @@ def cheating_probability_matrix(df):
             count += 1
         if count == 5:  # Stop after printing 5 valid pairs
             break
-
+    '''
     return matrix
 
 # Main execution
 df = pd.read_csv('SMT_2024/SMT_Algebra_2024_processed_small.csv')
-debug_cheating_probability(df, '069D', '069F')
-#cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
+#debug_cheating_probability(df, '069D', '069F')
+cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
 #print("Cheating Probability Matrix:")
 #print(cheating_matrix)
