@@ -95,6 +95,8 @@ def cheating_probability_matrix(df):
 if __name__ == '__main__':
     # Main execution
     df = pd.read_csv('SMT_2024/SMT_Algebra_2024_Small_processed.csv')
+    import pdb; pdb.set_trace()
+    
     # debug_cheating_probability(df, '069D', '069D')
     cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
     # import pdb; pdb.set_trace()

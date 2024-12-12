@@ -1,0 +1,6 @@
+Heuristic takes in:
+1. Match data: Will be a vector of size 25 indicating whether the students answers matched on that question. 
+2. Correctness data: Will be 2 vectors of size 25 each indicating whether the students got that question correct. 
+3. Time data vectors: 1 Vectors of size 25 each indicating the absolute difference in the times that the student submitted that question. 
+
+All vectors will have None's in places where the student did not take that test. 

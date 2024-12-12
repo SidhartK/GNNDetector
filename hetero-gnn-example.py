@@ -33,6 +33,7 @@ class HeteroGNN(torch.nn.Module):
         self.lin = Linear(32 * 2, 2)  # Output layer for pairwise classification 
 
     def forward(self, x_dict, edge_index_dict):
+        import pdb; pdb.set_trace()
         x_dict = self.conv(x_dict, edge_index_dict)
         node_embeddings = x_dict['node']
         return node_embeddings
@@ -70,8 +71,9 @@ for epoch in range(50):
     embeddings = hetero_model(
         x_dict={'node': data['node'].x},
         edge_index_dict={
-            ('node', 'edge_type_1', 'node'): data['node', 'edge_type_1', 'node'].edge_index,
-            ('node', 'edge_type_2', 'node'): data['node', 'edge_type_2', 'node'].edge_index,
+            # ('node', 'edge_type_1', 'node'): data['node', 'edge_type_1', 'node'].edge_index,
+            # ('node', 'edge_type_2', 'node'): data['node', 'edge_type_2', 'node'].edge_index,
+            edge_type: data[edge_type].edge_index for edge_type in metadata[1]
         },
     )
     # Pairwise predictions for all node pairs
@@ -91,6 +93,7 @@ start = time.time()
 for epoch in range(50):
     relational_model.train()
     optimizer_relational.zero_grad()
+    import pdb; pdb.set_trace()
     embeddings = relational_model(
         x=data['node'].x,
         edge_index=torch.cat(
