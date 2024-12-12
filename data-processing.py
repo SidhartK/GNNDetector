@@ -21,9 +21,9 @@ def generate():
         df.loc[df[correct_col] == 0, freq_col] = df.loc[df[correct_col] == 0, col].map(counts/counts.sum())
         df.loc[df[correct_col] == 1, freq_col] = df[f"C{i}"].mean()
 
-    for i in range(1, 11):
-        correct_perc = f"C{i}_perc"
-        df[correct_perc] = big_df[f"C{i}"].mean()
+    # for i in range(1, 11):
+    #     correct_perc = f"C{i}_perc"
+    #     df[correct_perc] = big_df[f"C{i}"].mean()
 
 
     # Add the Start Time to the times in 'T1' to 'T10'
@@ -36,6 +36,10 @@ def generate():
         
         # Add duration to start time
         df[col] = start_time + duration
+
+        # Subtract the average time from the time in the column
+        df[col] = (df[col] - df[col].mean()).dt.total_seconds()
+        df[col] = df[col] / df[col].std()
 
     # Drop the 'Start Time' column
     df.drop(columns=['Start Time'], inplace=True)
