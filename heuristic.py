@@ -89,7 +89,7 @@ def cheating_probability_matrix(df):
     return matrix
 
 # Main execution
-df = pd.read_csv('SMT_2024/SMT_Algebra_2024_processed_small.csv')
+df = pd.read_csv('SMT_2024/SMT_Algebra_2024_processed.csv')
 #debug_cheating_probability(df, '069D', '069F')
 cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
 #print("Cheating Probability Matrix:")
