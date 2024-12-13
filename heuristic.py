@@ -95,7 +95,7 @@ def cheating_probability_matrix(df):
 if __name__ == '__main__':
     # Main execution
     df = pd.read_csv('SMT_2024/SMT_Algebra_2024_Small_processed.csv')
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     
     # debug_cheating_probability(df, '069D', '069D')
     cheating_matrix = cheating_probability_matrix(df)  # Get the cheating probability matrix
@@ -109,9 +109,9 @@ if __name__ == '__main__':
 
     # Plot the CDF
     plt.plot(x, y)
-    plt.xlabel('Value')
+    plt.xlabel('Cheating Probability')
     plt.ylabel('CDF')
-    plt.title('CDF of a Heuristic Distribution')
+    plt.title('CDF of the Heuristic')
     plt.show()
     #print("Cheating Probability Matrix:") 
     #print(cheating_matrix)

@@ -3,6 +3,9 @@ from torch.nn import functional as F
 from torch_geometric.data import HeteroData
 from torch_geometric.nn import HeteroConv, GATConv, RGCNConv, Linear
 import time
+#from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+import numpy as np
+
 
 import pickle
 import optuna
@@ -59,6 +62,72 @@ metadata = data.metadata()
 hetero_model = HeteroGNN(metadata, in_channels=in_channels)
 relational_model = RelationalGNN(num_relations=len(metadata[1]), in_channels=in_channels)
 
+def evaluate_model(model, data, labels, loss_func, metadata):
+    model.eval()
+    with torch.no_grad():
+        # Generate embeddings
+        embeddings = model(
+            x=data['node'].x,
+            edge_index=torch.cat(
+                [data[edge_type].edge_index for edge_type in metadata[1]], dim=1
+            ),
+            edge_type=torch.cat(
+                [
+                    torch.full((data[edge_type].edge_index.size(1),), i, dtype=torch.long)
+                        for i, edge_type in enumerate(metadata[1])
+                ]
+            ),
+        )
+        # Generate predictions
+        predictions = get_predictions(embeddings, model)
+        print("predictions", predictions)
+
+        # Compute loss
+        loss = loss_func(predictions, labels)
+        
+        # Convert logits to probabilities
+        probs = torch.sigmoid(predictions).flatten()
+        
+        # Threshold probabilities to obtain binary predictions
+        preds_binary = (probs > 0.5).long()
+        print("sum_preds_binary", preds_binary.sum())
+        
+        # Flatten true labels
+        true_labels = labels[:, 2].long()  # Use the third column for truth_labels
+        print("sum_true_labels", true_labels.sum())
+        # Compute accuracy
+        correct = (preds_binary == true_labels).sum().item()
+        total = true_labels.size(0)
+        print("correct", correct, "total", total)
+        accuracy = correct / total
+
+        # Compute true positives, false positives, false negatives
+        print("preds_binary", preds_binary, "true_labels", true_labels)
+        true_positive = ((preds_binary == 1) & (true_labels == 1)).sum().item()
+        false_positive = ((preds_binary == 1) & (true_labels == 0)).sum().item()
+        false_negative = ((preds_binary == 0) & (true_labels == 1)).sum().item()
+
+        # Compute precision
+        precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0.0
+        
+        # Compute recall
+        recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0.0
+        
+        # Compute F1-score
+        f1 = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        
+        # Compute ROC-AUC (manual trapezoidal integration for simplicity)
+        sorted_indices = torch.argsort(probs, descending=True)
+        sorted_labels = true_labels[sorted_indices]
+        sorted_probs = probs[sorted_indices]
+
+        tpr = torch.cumsum(sorted_labels, dim=0) / sorted_labels.sum()
+        fpr = torch.cumsum(1 - sorted_labels, dim=0) / (1 - sorted_labels).sum()
+        roc_auc = torch.trapz(tpr, fpr).item() if tpr.numel() > 1 else 0.0
+
+        return loss.item(), accuracy, precision, recall, f1, roc_auc
+
+
 def get_predictions(embeddings, model):
 # Pairwise predictions for all node pairs
     i, j = torch.meshgrid(torch.arange(num_nodes), torch.arange(num_nodes), indexing='ij')
@@ -69,12 +138,15 @@ def get_predictions(embeddings, model):
 
 # Binary cross-entropy loss (https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html)
 criterion = torch.nn.BCEWithLogitsLoss()
-def loss_func(pred, target, reg_param=0.1):
+def train_loss_func(pred, target, reg_param=0.1):
     heuristic_rec_loss = criterion(pred.flatten(), target[:, 0])
     team_rec_loss = criterion(pred.flatten(), target[:, 1])
-    return (heuristic_rec_loss * reg_param) + team_rec_loss
-    # return team_rec_loss
-    
+    #return (heuristic_rec_loss * reg_param) + team_rec_loss
+    return heuristic_rec_loss
+
+def test_loss_func(pred, target, reg_param=0.1):
+    label_rec_loss = criterion(pred.flatten(), target[:, 2])
+    return label_rec_loss
 
 # Optimizer and loss function for both models
 optimizer_hetero = torch.optim.Adam(hetero_model.parameters(), lr=0.01)
@@ -130,9 +202,18 @@ for epoch in range(500):
     # node_pairs = embeddings[i.flatten()] + embeddings[j.flatten()]
     # predictions = relational_model.lin(node_pairs)
     predictions = get_predictions(embeddings, relational_model)
-    loss = loss_func(predictions, labels)
+    loss = train_loss_func(predictions, labels)
     loss.backward()
     optimizer_relational.step()
     print(f"RelationalGNN Epoch {epoch + 1}, Loss: {loss.item():.4f}")
 
+    if (epoch + 1) % 5 == 0:
+        test_loss, accuracy, precision, recall, f1, roc_auc = evaluate_model(
+            relational_model, data, labels, test_loss_func, metadata
+        )
+        print(f"Epoch {epoch + 1}, Test Loss: {test_loss:.4f}")
+        print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1-Score: {f1:.4f}, ROC-AUC: {roc_auc:.4f}")
+
 print(f"Time taken: {time.time() - start:.2f}s")
+
+
