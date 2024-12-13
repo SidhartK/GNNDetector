@@ -13,6 +13,7 @@ def create_dataset(threshold = 0.5):
     data = HeteroData()
 
     data["node"].x = torch.tensor(df[[f"C{k}_{l}" for k in range(1, 11) for l in range(3)] + [f"A{k}_freq" for k in range(1, 11)] + [f"T{k}" for k in range(1, 11)]].to_numpy(), dtype=torch.float)
+    print(data["node"].x.shape)
     num_students = df.shape[0]
     heuristic_labels = np.zeros((num_students, num_students))
     team_labels = np.zeros((num_students, num_students))
