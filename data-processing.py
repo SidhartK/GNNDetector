@@ -13,7 +13,7 @@ def generate():
         correct_col = f"C{i}"
         freq_col = f"A{i}_freq"
         # Create a freq_col
-        df[freq_col] = 0.0
+        df[freq_col] = 1.0
         
         counts = df[df[correct_col] == 0][col].value_counts()
         df.loc[df[correct_col] == 0, freq_col] = df.loc[df[correct_col] == 0, col].map(counts/counts.sum())
@@ -90,7 +90,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     df = generate()
-    import pdb; pdb.set_trace()
     if not args.big:
         # small_df = pd.read_csv("SMT_2024/SMT_Algebra_2024_Small.csv").rename(columns={"#": "id"})
         small_df = pd.read_csv("SMT_2024/SMT_Algebra_2024_processed_small.csv").rename(columns={"#": "id"})
