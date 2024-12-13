@@ -32,7 +32,7 @@ class HeteroGNN(torch.nn.Module):
         return node_embeddings
 
 # 2. Relational GCN
-class RelationalGNN(torch.nn.Module):
+class RelationalGCN(torch.nn.Module):
     def __init__(self, num_relations, in_channels, hidden_channels=[256, 64]):
         """
         Parameters
@@ -70,7 +70,7 @@ in_channels = data['node'].x.size(1)    # 50: (10 * 3) + 10 + 10
 # Instantiate models and datasets
 metadata = data.metadata()
 hetero_model = HeteroGNN(metadata, in_channels=in_channels)
-relational_model = RelationalGNN(num_relations=len(metadata[1]), in_channels=in_channels)
+relational_model = RelationalGCN(num_relations=len(metadata[1]), in_channels=in_channels)
 
 def evaluate_model(model, data, labels, loss_func, metadata):
     model.eval()
