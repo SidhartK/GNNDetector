@@ -10,6 +10,11 @@ import numpy as np
 import pickle
 import optuna
 
+heterogat = False
+rgcn = True
+num_epochs = 500
+print_every = 50
+
 """
 0. Get data
 - Run `python data-processing.py`
@@ -18,18 +23,27 @@ import optuna
 
 # 1. Heterogeneous GNN with GAT
 class HeteroGNN(torch.nn.Module):
-    def __init__(self, metadata, in_channels, hidden_channels=128):
+    def __init__(self, metadata, in_channels, hidden_channels=[256, 64]):
         super().__init__()
-        self.conv = HeteroConv({
-            edge_type: GATConv(in_channels, hidden_channels, heads=2, concat=True) 
+        self.conv1 = HeteroConv({
+            edge_type: GATConv(in_channels, hidden_channels[0], heads=2, concat=True) 
                 for edge_type in metadata[1]
         }, aggr='sum')
-        self.lin = Linear(hidden_channels * 2, 1)  # Output layer for pairwise classification 
+        self.conv2 = HeteroConv({
+            edge_type: GATConv(2*hidden_channels[0], hidden_channels[1], heads=2, concat=True) 
+                for edge_type in metadata[1]
+        }, aggr='sum')
+        self.lin = Linear(hidden_channels[1] * 2, 1)  # Output layer for pairwise classification 
 
     def forward(self, x_dict, edge_index_dict):
-        x_dict = self.conv(x_dict, edge_index_dict)
+        x_dict = self.conv1(x_dict, edge_index_dict)
+        x_dict = {k: F.relu(x) for k, x in x_dict.items()}
+        x_dict = self.conv2(x_dict, edge_index_dict)
         node_embeddings = x_dict['node']
-        return node_embeddings
+        
+        i, j = torch.meshgrid(torch.arange(num_nodes), torch.arange(num_nodes), indexing='ij')
+        node_pairs = node_embeddings[i.flatten()] + node_embeddings[j.flatten()]
+        return self.lin(node_pairs)
 
 # 2. Relational GCN
 class RelationalGCN(torch.nn.Module):
@@ -46,9 +60,9 @@ class RelationalGCN(torch.nn.Module):
         """
         super().__init__()
         self.conv1 = RGCNConv(in_channels, hidden_channels[0], num_relations=num_relations)
-        # self.conv2 = RGCNConv(hidden_channels[0], hidden_channels[0], num_relations=num_relations)
-        # self.conv3 = RGCNConv(hidden_channels[0], hidden_channels[0], num_relations=num_relations)
-        self.conv2 = RGCNConv(hidden_channels[0], hidden_channels[1], num_relations=num_relations)
+        self.conv2 = RGCNConv(hidden_channels[0], hidden_channels[0], num_relations=num_relations)
+        self.conv3 = RGCNConv(hidden_channels[0], hidden_channels[0], num_relations=num_relations)
+        self.conv4 = RGCNConv(hidden_channels[0], hidden_channels[1], num_relations=num_relations)
         self.lin = Linear(hidden_channels[1], 1)  # Output layer for pairwise classification
 
     def forward(self, x, edge_index, edge_type):
@@ -58,8 +72,11 @@ class RelationalGCN(torch.nn.Module):
         x = F.relu(x)
         x = self.conv3(x, edge_index, edge_type)
         x = F.relu(x)
-        x = self.conv4(x, edge_index, edge_type)
-        return x
+        node_embeddings = self.conv4(x, edge_index, edge_type)
+
+        i, j = torch.meshgrid(torch.arange(num_nodes), torch.arange(num_nodes), indexing='ij')
+        node_pairs = node_embeddings[i.flatten()] + node_embeddings[j.flatten()]
+        return self.lin(node_pairs)
 
 
 with open("data/data.pkl", "rb") as f:
@@ -138,13 +155,13 @@ def evaluate_model(model, data, labels, loss_func, metadata):
         return loss.item(), accuracy, precision, recall, f1, roc_auc
 
 
-def get_predictions(embeddings, model):
-# Pairwise predictions for all node pairs
-    i, j = torch.meshgrid(torch.arange(num_nodes), torch.arange(num_nodes), indexing='ij')
+# def get_predictions(embeddings, model):
+# # Pairwise predictions for all node pairs
+#     i, j = torch.meshgrid(torch.arange(num_nodes), torch.arange(num_nodes), indexing='ij')
 
-    # node_pairs = torch.cat([embeddings[i.flatten()], embeddings[j.flatten()]], dim=1)
-    node_pairs = embeddings[i.flatten()] + embeddings[j.flatten()]
-    return model.lin(node_pairs)
+#     # node_pairs = torch.cat([embeddings[i.flatten()], embeddings[j.flatten()]], dim=1)
+#     node_pairs = embeddings[i.flatten()] + embeddings[j.flatten()]
+#     return model.lin(node_pairs)
 
 # Calculate the number of positive and negative examples
 num_positive = (labels[:, 2] == 1).sum().item()  # Count of positive examples
@@ -155,10 +172,10 @@ pos_weight = num_negative / num_positive if num_positive > 0 else 1.0
 # pos_weight = 12.0
 # print("pos_weight", pos_weight)
 # Binary cross-entropy loss with pos_weight
-heuristic_criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight))
+heuristic_criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(2*pos_weight))
 team_criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(10.0))
 def train_loss_func(pred, target, reg_param=0.1):
-    heuristic_rec_loss = heuristic_criterion(pred.flatten(), target[:, 0])
+    heuristic_rec_loss = heuristic_criterion(pred.flatten(), target[:, 2])
     team_rec_loss = team_criterion(pred.flatten(), target[:, 1])
     # print("heuristic_rec_loss", heuristic_rec_loss, "team_rec_loss", team_rec_loss)
     return (heuristic_rec_loss * reg_param) + team_rec_loss
@@ -204,10 +221,7 @@ optimizer_relational = torch.optim.Adam(relational_model.parameters(), lr=0.01)
 #     print(f"HeteroGNN Epoch {epoch + 1}, Loss: {loss.item():.4f}")
 # print(f"Time taken: {time.time() - start:.2f}s")
 
-heterogat = True
-rgcn = True
-num_epochs = 500
-print_every = 50
+
 
 if heterogat:
     print("-" * 50)
@@ -217,14 +231,14 @@ if heterogat:
         verbose = (epoch + 1) % print_every == 0 
         hetero_model.train()
         optimizer_hetero.zero_grad()
-        embeddings = hetero_model(
+        predictions = hetero_model(
             x_dict={'node': data['node'].x},
             edge_index_dict={
                 edge_type: data[edge_type].edge_index
                     for edge_type in metadata[1]
             },
         )
-        predictions = get_predictions(embeddings, hetero_model)
+        # predictions = get_predictions(embeddings, hetero_model)
         # # Pairwise predictions for all node pairs
         # i, j = torch.meshgrid(torch.arange(100), torch.arange(100), indexing='ij')
 
@@ -255,7 +269,7 @@ if rgcn:
 
         relational_model.train()
         optimizer_relational.zero_grad()
-        embeddings = relational_model(
+        predictions = relational_model(
             x=data['node'].x,
             edge_index=torch.cat(
                 [data[edge_type].edge_index for edge_type in metadata[1]], dim=1
@@ -272,7 +286,7 @@ if rgcn:
         # # node_pairs = torch.cat([embeddings[i.flatten()], embeddings[j.flatten()]], dim=1)
         # node_pairs = embeddings[i.flatten()] + embeddings[j.flatten()]
         # predictions = relational_model.lin(node_pairs)
-        predictions = get_predictions(embeddings, relational_model)
+        # predictions = get_predictions(embeddings, relational_model)
         loss = train_loss_func(predictions, labels)
         loss.backward()
         optimizer_relational.step()
