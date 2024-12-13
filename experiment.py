@@ -32,7 +32,7 @@ class HeteroGNN(torch.nn.Module):
         return node_embeddings
 
 # 2. Relational GCN
-class RelationalGNN(torch.nn.Module):
+class RelationalGCN(torch.nn.Module):
     def __init__(self, num_relations, in_channels, hidden_channels=[256, 64]):
         """
         Parameters
@@ -70,7 +70,7 @@ in_channels = data['node'].x.size(1)    # 50: (10 * 3) + 10 + 10
 # Instantiate models and datasets
 metadata = data.metadata()
 hetero_model = HeteroGNN(metadata, in_channels=in_channels)
-relational_model = RelationalGNN(num_relations=len(metadata[1]), in_channels=in_channels)
+relational_model = RelationalGCN(num_relations=len(metadata[1]), in_channels=in_channels)
 
 def evaluate_model(model, data, labels, loss_func, metadata):
     model.eval()
@@ -197,7 +197,7 @@ optimizer_relational = torch.optim.Adam(relational_model.parameters(), lr=0.01)
 # print(f"Time taken: {time.time() - start:.2f}s")
 
 start = time.time()
-# Training loop for RelationalGNN
+# Training loop for RelationalGCN
 for epoch in range(500):
     relational_model.train()
     optimizer_relational.zero_grad()
@@ -222,7 +222,7 @@ for epoch in range(500):
     loss = train_loss_func(predictions, labels)
     loss.backward()
     optimizer_relational.step()
-    print(f"RelationalGNN Epoch {epoch + 1}, Loss: {loss.item():.4f}")
+    print(f"RelationalGCN Epoch {epoch + 1}, Loss: {loss.item():.4f}")
 
     if (epoch + 1) % 5 == 0:
         test_loss, accuracy, precision, recall, f1, roc_auc = evaluate_model(
