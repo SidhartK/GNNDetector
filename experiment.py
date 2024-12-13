@@ -34,6 +34,16 @@ class HeteroGNN(torch.nn.Module):
 # 2. Relational GCN
 class RelationalGNN(torch.nn.Module):
     def __init__(self, num_relations, in_channels, hidden_channels=[256, 64]):
+        """
+        Parameters
+        ----------
+        num_relations : int
+            Number of relation types between nodes.
+        in_channels : int
+            Number of features per node.
+        hidden_channels : list of int, optional
+            Number of hidden channels in each layer, by default [256, 64]
+        """
         super().__init__()
         self.conv1 = RGCNConv(in_channels, hidden_channels[0], num_relations=num_relations)
         self.conv2 = RGCNConv(hidden_channels[0], hidden_channels[0], num_relations=num_relations)
@@ -136,13 +146,20 @@ def get_predictions(embeddings, model):
     node_pairs = embeddings[i.flatten()] + embeddings[j.flatten()]
     return model.lin(node_pairs)
 
-# Binary cross-entropy loss (https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html)
-criterion = torch.nn.BCEWithLogitsLoss()
+# Calculate the number of positive and negative examples
+num_positive = (labels[:, 2] == 1).sum().item()  # Count of positive examples
+num_negative = (labels[:, 2] == 0).sum().item()  # Count of negative examples
+
+# Calculate pos_weight as the ratio of negative to positive examples
+pos_weight = num_negative / num_positive if num_positive > 0 else 1.0
+print("pos_weight", pos_weight)
+# Binary cross-entropy loss with pos_weight
+criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight))
 def train_loss_func(pred, target, reg_param=0.1):
     heuristic_rec_loss = criterion(pred.flatten(), target[:, 0])
     team_rec_loss = criterion(pred.flatten(), target[:, 1])
-    #return (heuristic_rec_loss * reg_param) + team_rec_loss
-    return heuristic_rec_loss
+    return (heuristic_rec_loss * reg_param) + team_rec_loss
+    #return heuristic_rec_loss
 
 def test_loss_func(pred, target, reg_param=0.1):
     label_rec_loss = criterion(pred.flatten(), target[:, 2])
