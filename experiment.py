@@ -22,7 +22,7 @@ print_every = 50
 """
 
 # 1. Heterogeneous GNN with GAT
-class HeteroGNN(torch.nn.Module):
+class HeteroGAT(torch.nn.Module):
     def __init__(self, metadata, in_channels, hidden_channels=[256, 64]):
         super().__init__()
         self.conv1 = HeteroConv({
@@ -73,7 +73,7 @@ class RelationalGCN(torch.nn.Module):
         x = self.conv3(x, edge_index, edge_type)
         x = F.relu(x)
         node_embeddings = self.conv4(x, edge_index, edge_type)
-
+        # Pairwise predictions for all node pairs
         i, j = torch.meshgrid(torch.arange(num_nodes), torch.arange(num_nodes), indexing='ij')
         node_pairs = node_embeddings[i.flatten()] + node_embeddings[j.flatten()]
         return self.lin(node_pairs)
@@ -86,7 +86,7 @@ num_nodes = data['node'].x.size(0)      # 136
 in_channels = data['node'].x.size(1)    # 50: (10 * 3) + 10 + 10
 # Instantiate models and datasets
 metadata = data.metadata()
-hetero_model = HeteroGNN(metadata, in_channels=in_channels)
+hetero_model = HeteroGAT(metadata, in_channels=in_channels)
 relational_model = RelationalGCN(num_relations=len(metadata[1]), in_channels=in_channels)
 
 def evaluate_model(model, data, labels, loss_func, metadata):
@@ -196,7 +196,7 @@ optimizer_relational = torch.optim.Adam(relational_model.parameters(), lr=0.01)
 
 
 # start = time.time()
-# # Training loop for HeteroGNN
+# # Training loop for HeteroGAT
 # for epoch in range(200):
 #     hetero_model.train()
 #     optimizer_hetero.zero_grad()
@@ -218,7 +218,7 @@ optimizer_relational = torch.optim.Adam(relational_model.parameters(), lr=0.01)
 #     loss = loss_func(predictions, labels)
 #     loss.backward()
 #     optimizer_hetero.step()
-#     print(f"HeteroGNN Epoch {epoch + 1}, Loss: {loss.item():.4f}")
+#     print(f"HeteroGAT Epoch {epoch + 1}, Loss: {loss.item():.4f}")
 # print(f"Time taken: {time.time() - start:.2f}s")
 
 
@@ -226,7 +226,7 @@ optimizer_relational = torch.optim.Adam(relational_model.parameters(), lr=0.01)
 if heterogat:
     print("-" * 50)
     start = time.time()
-    # Training loop for HeteroGNN
+    # Training loop for HeteroGAT
     for epoch in range(num_epochs):
         verbose = (epoch + 1) % print_every == 0 
         hetero_model.train()
